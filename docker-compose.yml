@@ -1,0 +1,22 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: codebase-chat-ai-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: codeuser
+      POSTGRES_PASSWORD: codepassword
+      POSTGRES_DB: codebasechat
+    ports:
+      - "5434:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U codeuser -d codebasechat"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  pgdata:

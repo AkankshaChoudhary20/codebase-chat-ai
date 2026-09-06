@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# Environment variables / secrets
+.env
+.env.*
+!.env.example
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+
+# Logs
+*.log
+
+# Docker volumes are managed by Docker itself, not this repo
+pgdata/
+
+# sentence-transformers / huggingface cache if downloaded locally into repo
+.cache/
+model_cache/
+
+# Working directory for `git clone`d repos ingested via POST /repos
+data/
+data/clones/
+
+# pytest / coverage
+.pytest_cache/
+.coverage
+htmlcov/

@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>codebase-chat-ai</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --panel: #171a21;
+    --border: #2a2e38;
+    --text: #e6e9ef;
+    --muted: #8b93a5;
+    --accent: #5b9dff;
+    --accent-dim: #2c4a78;
+    --code-bg: #0b0d11;
+    --ok: #4caf7d;
+    --err: #e5637a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+  }
+  header {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+  }
+  header h1 { margin: 0; font-size: 1.3rem; }
+  header p { margin: 4px 0 0; color: var(--muted); font-size: 0.9rem; }
+  main {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+  section.panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 20px;
+  }
+  section.panel h2 {
+    margin: 0 0 12px;
+    font-size: 1rem;
+    color: var(--text);
+  }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  input[type=text], textarea, select {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 6px;
+    padding: 9px 11px;
+    font-size: 0.92rem;
+    font-family: inherit;
+  }
+  input[type=text] { flex: 1; min-width: 220px; }
+  textarea { width: 100%; min-height: 70px; resize: vertical; }
+  button {
+    background: var(--accent);
+    color: #06101f;
+    border: none;
+    border-radius: 6px;
+    padding: 9px 16px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+  }
+  button:hover { filter: brightness(1.08); }
+  button:disabled { opacity: 0.5; cursor: default; }
+  button.secondary {
+    background: transparent;
+    border: 1px solid var(--accent-dim);
+    color: var(--accent);
+  }
+  .muted { color: var(--muted); font-size: 0.85rem; }
+  .status { margin-top: 10px; font-size: 0.87rem; }
+  .status.ok { color: var(--ok); }
+  .status.err { color: var(--err); white-space: pre-wrap; }
+  .repo-picker { display: flex; gap: 10px; align-items: center; margin-top: 14px; flex-wrap: wrap; }
+  .tabs { display: flex; gap: 6px; margin-bottom: 14px; }
+  .tabs button { background: transparent; border: 1px solid var(--border); color: var(--muted); }
+  .tabs button.active { background: var(--accent-dim); color: var(--text); border-color: var(--accent-dim); }
+  .hidden { display: none !important; }
+  .result {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 10px;
+    background: var(--code-bg);
+  }
+  .result .loc {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.85rem;
+    color: var(--accent);
+  }
+  .result .meta { color: var(--muted); font-size: 0.78rem; margin-left: 8px; }
+  .result pre {
+    margin: 8px 0 0;
+    padding: 10px;
+    background: #05070a;
+    border-radius: 6px;
+    overflow-x: auto;
+    font-size: 0.8rem;
+    line-height: 1.4;
+  }
+  .answer {
+    white-space: pre-wrap;
+    line-height: 1.5;
+    padding: 12px 14px;
+    background: var(--code-bg);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+  .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--muted);
+    border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>codebase-chat-ai</h1>
+  <p>Chat with a codebase, not a document -- code-aware RAG with symbol-level chunking and file:line citations.</p>
+</header>
+
+<main>
+
+  <section class="panel">
+    <h2>1. Ingest a repo</h2>
+    <div class="row">
+      <input id="source-input" type="text" placeholder="Local path (e.g. /Users/you/code/myrepo) or git URL (https://github.com/owner/repo.git)" />
+      <input id="name-input" type="text" placeholder="Display name (optional)" style="flex:0 0 200px;" />
+      <button id="ingest-btn">Ingest</button>
+    </div>
+    <div id="ingest-status" class="status"></div>
+
+    <div class="repo-picker">
+      <span class="muted">Active repo:</span>
+      <select id="repo-select"><option value="">-- none ingested yet --</option></select>
+      <button class="secondary" id="refresh-repos-btn">Refresh list</button>
+    </div>
+  </section>
+
+  <section class="panel" id="query-panel">
+    <div class="tabs">
+      <button id="tab-search" class="active">Semantic search</button>
+      <button id="tab-chat">Chat</button>
+    </div>
+
+    <div id="search-view">
+      <div class="row">
+        <input id="search-input" type="text" placeholder="e.g. where is retry logic implemented?" />
+        <button id="search-btn">Search</button>
+      </div>
+      <div class="muted" style="margin-top:6px;">Pure vector search, no LLM call -- fast lookup, ranked by cosine similarity.</div>
+      <div id="search-status" class="status"></div>
+      <div id="search-results"></div>
+    </div>
+
+    <div id="chat-view" class="hidden">
+      <textarea id="chat-input" placeholder="e.g. how does authentication work in this codebase?"></textarea>
+      <div class="row" style="margin-top:8px;">
+        <button id="chat-btn">Ask Claude</button>
+      </div>
+      <div id="chat-status" class="status"></div>
+      <div id="chat-answer"></div>
+      <div id="chat-sources"></div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+let activeRepoId = null;
+
+function escapeHtml(s) {
+  return s.replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+
+function setStatus(el, msg, kind) {
+  el.textContent = msg;
+  el.className = "status" + (kind ? " " + kind : "");
+}
+
+async function refreshRepos(selectId) {
+  const res = await fetch("/repos");
+  const repos = await res.json();
+  const select = $("repo-select");
+  select.innerHTML = "";
+  if (repos.length === 0) {
+    select.innerHTML = '<option value="">-- none ingested yet --</option>';
+    activeRepoId = null;
+    return;
+  }
+  for (const r of repos) {
+    const opt = document.createElement("option");
+    opt.value = r.id;
+    opt.textContent = `${r.name} (#${r.id}, ${r.num_chunks} chunks)`;
+    select.appendChild(opt);
+  }
+  const toSelect = selectId ?? repos[0].id;
+  select.value = String(toSelect);
+  activeRepoId = select.value ? Number(select.value) : null;
+}
+
+$("repo-select").addEventListener("change", (e) => {
+  activeRepoId = e.target.value ? Number(e.target.value) : null;
+});
+
+$("refresh-repos-btn").addEventListener("click", () => refreshRepos());
+
+$("ingest-btn").addEventListener("click", async () => {
+  const source = $("source-input").value.trim();
+  const name = $("name-input").value.trim();
+  if (!source) return;
+  const btn = $("ingest-btn");
+  btn.disabled = true;
+  setStatus($("ingest-status"), "Ingesting... this can take a while for a git clone or a large repo.");
+  try {
+    const res = await fetch("/repos", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ source, name: name || null }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || "Ingestion failed.");
+    setStatus(
+      $("ingest-status"),
+      `Done: "${data.name}" -- ${data.files_indexed}/${data.files_scanned} files indexed, ${data.chunks_created} chunks created.`,
+      "ok"
+    );
+    await refreshRepos(data.id);
+  } catch (err) {
+    setStatus($("ingest-status"), "Error: " + err.message, "err");
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+$("tab-search").addEventListener("click", () => {
+  $("tab-search").classList.add("active");
+  $("tab-chat").classList.remove("active");
+  $("search-view").classList.remove("hidden");
+  $("chat-view").classList.add("hidden");
+});
+$("tab-chat").addEventListener("click", () => {
+  $("tab-chat").classList.add("active");
+  $("tab-search").classList.remove("active");
+  $("chat-view").classList.remove("hidden");
+  $("search-view").classList.add("hidden");
+});
+
+function renderResult(chunk) {
+  const div = document.createElement("div");
+  div.className = "result";
+  const label = chunk.symbol_name ? `${chunk.symbol_type} ${chunk.symbol_name}` : chunk.symbol_type;
+  div.innerHTML = `
+    <span class="loc">${escapeHtml(chunk.location)}</span>
+    <span class="meta">${escapeHtml(label)} &middot; similarity ${chunk.similarity.toFixed(3)}</span>
+    <pre><code>${escapeHtml(chunk.code_text)}</code></pre>
+  `;
+  return div;
+}
+
+$("search-btn").addEventListener("click", async () => {
+  const q = $("search-input").value.trim();
+  if (!q) return;
+  if (!activeRepoId) { setStatus($("search-status"), "Ingest or select a repo first.", "err"); return; }
+  setStatus($("search-status"), "Searching...");
+  $("search-results").innerHTML = "";
+  try {
+    const res = await fetch(`/repos/${activeRepoId}/search?q=${encodeURIComponent(q)}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || "Search failed.");
+    setStatus($("search-status"), `${data.results.length} result(s).`, "ok");
+    for (const chunk of data.results) $("search-results").appendChild(renderResult(chunk));
+  } catch (err) {
+    setStatus($("search-status"), "Error: " + err.message, "err");
+  }
+});
+
+$("chat-btn").addEventListener("click", async () => {
+  const question = $("chat-input").value.trim();
+  if (!question) return;
+  if (!activeRepoId) { setStatus($("chat-status"), "Ingest or select a repo first.", "err"); return; }
+  $("chat-answer").innerHTML = "";
+  $("chat-sources").innerHTML = "";
+  setStatus($("chat-status"), "Asking Claude...");
+  try {
+    const res = await fetch(`/repos/${activeRepoId}/chat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || "Chat failed.");
+    setStatus($("chat-status"), "", "");
+    const ansDiv = document.createElement("div");
+    ansDiv.className = "answer";
+    ansDiv.textContent = data.answer;
+    $("chat-answer").appendChild(ansDiv);
+
+    if (data.cited_chunks.length) {
+      const heading = document.createElement("div");
+      heading.className = "muted";
+      heading.style.marginTop = "14px";
+      heading.textContent = "Retrieved chunks used as context:";
+      $("chat-sources").appendChild(heading);
+      for (const chunk of data.cited_chunks) $("chat-sources").appendChild(renderResult(chunk));
+    }
+  } catch (err) {
+    setStatus($("chat-status"), "Error: " + err.message, "err");
+  }
+});
+
+refreshRepos();
+</script>
+</body>
+</html>

@@ -1,0 +1,21 @@
+fastapi>=0.115
+uvicorn[standard]>=0.32
+python-multipart>=0.0.17
+pydantic>=2.10
+pydantic-settings>=2.6
+
+# psycopg2-binary has no prebuilt wheel on very new Python versions (e.g. 3.14).
+# psycopg v3 (the "binary" extra bundles libpq, no system deps needed) is the
+# actively maintained driver and installs cleanly there -- same fix used in
+# the sibling rag-docs-chat project.
+psycopg[binary,pool]>=3.2
+pgvector>=0.3
+
+# Local embeddings -- no external embeddings API. Version ranges (not exact
+# pins) so pip can resolve a build compatible with whatever Python you have;
+# on very new Python versions torch may not have a wheel yet -- see README's
+# "Verification" section for what to do if this install fails.
+sentence-transformers>=3.3
+
+anthropic>=0.40
+python-dotenv>=1.0
