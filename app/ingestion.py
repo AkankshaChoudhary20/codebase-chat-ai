@@ -5,6 +5,7 @@ them in pgvector.
 
 from __future__ import annotations
 
+import os
 import re
 import subprocess
 import uuid
@@ -137,36 +138,31 @@ def iter_source_files(root: Path, max_file_size_bytes: int):
     indexing: skips VCS/dependency/build directories, binary files, files
     over the size cap, and files whose bytes don't decode as UTF-8 text.
     """
-    for path in sorted(root.rglob("*")):
-        if not path.is_file():
-            continue
-        if any(part in SKIP_DIR_NAMES for part in path.relative_to(root).parts[:-1]):
-            continue
-        if path.suffix.lower() not in INDEXABLE_EXTENSIONS:
-            continue
-
-        try:
-            size = path.stat().st_size
-        except OSError:
-            continue
-        if size == 0 or size > max_file_size_bytes:
-            continue
-
-        try:
-            with open(path, "rb") as f:
-                raw = f.read()
-        except OSError:
-            continue
-
-        if _looks_binary(raw[:8192]):
-            continue
-
-        try:
-            text = raw.decode("utf-8")
-        except UnicodeDecodeError:
-            continue
-
-        yield path.relative_to(root).as_posix(), text
+    for directory, subdirectories, filenames in os.walk(root, followlinks=False):
+        # Prune dependency trees before traversing them, rather than filtering
+        # their files after an expensive recursive walk.
+        subdirectories[:] = sorted(name for name in subdirectories
+            if name not in SKIP_DIR_NAMES and not name.endswith('.egg-info')
+            and not (Path(directory) / name).is_symlink())
+        for filename in sorted(filenames):
+            path = Path(directory) / filename
+            if path.is_symlink() or path.suffix.lower() not in INDEXABLE_EXTENSIONS:
+                continue
+            try:
+                size = path.stat().st_size
+                if size == 0 or size > max_file_size_bytes:
+                    continue
+                with path.open('rb') as source_file:
+                    raw = source_file.read(max_file_size_bytes + 1)
+            except OSError:
+                continue
+            if len(raw) > max_file_size_bytes or _looks_binary(raw[:8192]):
+                continue
+            try:
+                text = raw.decode('utf-8')
+            except UnicodeDecodeError:
+                continue
+            yield path.relative_to(root).as_posix(), text
 
 
 def ingest_repo(source: str, name: str | None = None) -> IngestResult:
