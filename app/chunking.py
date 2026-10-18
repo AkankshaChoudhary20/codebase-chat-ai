@@ -126,6 +126,16 @@ def chunk_python_source(source: str, file_path: str) -> list[CodeChunk]:
                         )
                     )
 
+    if not chunks:
+        return []  # Preserve whole-file fallback for modules without symbols.
+
+    # Keep imports, constants and executable module statements searchable
+    # when the same file also contains function or class definitions.
+    for node in tree.body:
+        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            start, end = line_span(node)
+            chunks.append(CodeChunk(file_path, None, "module", start, end, extract(start, end)))
+    chunks.sort(key=lambda chunk: chunk.start_line)
     return chunks
 
 
