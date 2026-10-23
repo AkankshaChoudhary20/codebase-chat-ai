@@ -316,6 +316,25 @@ def chunk_generic_source(source: str, file_path: str, ext: str) -> list[CodeChun
             )
         )
 
+    if chunks:
+        # Symbols alone omit imports, constants and top-level statements.
+        # Emit contiguous uncovered spans with their original line numbers.
+        covered = [False] * len(lines)
+        for chunk in chunks:
+            covered[chunk.start_line - 1:chunk.end_line] = [True] * (chunk.end_line - chunk.start_line + 1)
+        start = 0
+        while start < len(lines):
+            if covered[start]:
+                start += 1
+                continue
+            end = start + 1
+            while end < len(lines) and not covered[end]:
+                end += 1
+            text = "\n".join(lines[start:end])
+            if text.strip():
+                chunks.append(CodeChunk(file_path, None, "module", start + 1, end, text))
+            start = end
+        chunks.sort(key=lambda chunk: chunk.start_line)
     return chunks
 
 
