@@ -135,6 +135,22 @@ def chunk_python_source(source: str, file_path: str) -> list[CodeChunk]:
         if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
             start, end = line_span(node)
             chunks.append(CodeChunk(file_path, None, "module", start, end, extract(start, end)))
+    # Preserve standalone comments and file headers outside AST node spans.
+    covered = set()
+    for chunk in chunks:
+        covered.update(range(chunk.start_line, chunk.end_line + 1))
+    start = 0
+    while start < len(lines):
+        if start + 1 in covered:
+            start += 1
+            continue
+        end = start + 1
+        while end < len(lines) and end + 1 not in covered:
+            end += 1
+        text = "\n".join(lines[start:end])
+        if text.strip():
+            chunks.append(CodeChunk(file_path, None, "module", start + 1, end, text))
+        start = end
     chunks.sort(key=lambda chunk: chunk.start_line)
     return chunks
 
