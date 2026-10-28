@@ -305,3 +305,5 @@ available):
 Not independently re-verified in this pass: a live chat response from a real,
 valid Anthropic API key (no key was available in this environment) -- the 401 test
 above demonstrates the wiring is correct up to that point.
+
+Python type stubs (`.pyi`) and Windows scripts (`.pyw`) are indexed with the same AST-based symbol chunks as `.py` files.

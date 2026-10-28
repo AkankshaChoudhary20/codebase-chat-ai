@@ -358,7 +358,7 @@ def chunk_generic_source(source: str, file_path: str, ext: str) -> list[CodeChun
 # Dispatcher
 # ---------------------------------------------------------------------------
 
-_PYTHON_EXTS = {".py"}
+_PYTHON_EXTS = {".py", ".pyi", ".pyw"}
 _GENERIC_EXTS = {".js", ".jsx", ".ts", ".tsx", ".go", ".java", ".rs"}
 
 

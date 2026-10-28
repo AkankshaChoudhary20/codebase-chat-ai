@@ -23,3 +23,11 @@ class SourceWalkTests(unittest.TestCase):
             (root/'large.py').write_text('x'*21)
             (root/'ok.py').write_text('ok')
             self.assertEqual(list(iter_source_files(root,20)),[('ok.py','ok')])
+
+    def test_python_stubs_and_windows_scripts_are_indexed(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for name in ['client.pyi', 'window.pyw', 'types.PYI']:
+                (root / name).write_text('def run(): ...')
+            self.assertEqual({name for name, _ in iter_source_files(root, 1000)},
+                             {'client.pyi', 'window.pyw', 'types.PYI'})

@@ -46,6 +46,8 @@ SKIP_DIR_NAMES = {
 # obviously irrelevant files).
 INDEXABLE_EXTENSIONS = {
     ".py",
+    ".pyi",
+    ".pyw",
     ".js",
     ".jsx",
     ".ts",
