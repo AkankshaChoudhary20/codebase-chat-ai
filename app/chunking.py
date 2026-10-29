@@ -259,7 +259,7 @@ def chunk_generic_source(source: str, file_path: str, ext: str) -> list[CodeChun
     lines = source.splitlines()
     matches: list[tuple[int, str, str]] = []  # (0-indexed line, name, symbol_type)
 
-    if ext in (".js", ".jsx", ".ts", ".tsx"):
+    if ext in (".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs", ".mts", ".cts"):
         for i, line in enumerate(lines):
             matched = False
             for pattern, sym_type in _JS_TS_TOP_LEVEL_PATTERNS:
@@ -359,7 +359,7 @@ def chunk_generic_source(source: str, file_path: str, ext: str) -> list[CodeChun
 # ---------------------------------------------------------------------------
 
 _PYTHON_EXTS = {".py", ".pyi", ".pyw"}
-_GENERIC_EXTS = {".js", ".jsx", ".ts", ".tsx", ".go", ".java", ".rs"}
+_GENERIC_EXTS = {".mjs", ".cjs", ".mts", ".cts", ".js", ".jsx", ".ts", ".tsx", ".go", ".java", ".rs"}
 
 
 def chunk_file(file_path: str, source: str) -> list[CodeChunk]:
