@@ -165,7 +165,8 @@ def iter_source_files(root: Path, max_file_size_bytes: int):
             if len(raw) > max_file_size_bytes or _looks_binary(raw[:8192]):
                 continue
             try:
-                text = raw.decode('utf-8')
+                # Strip an optional UTF-8 BOM so Python AST parsing keeps symbols.
+                text = raw.decode('utf-8-sig')
             except UnicodeDecodeError:
                 continue
             yield path.relative_to(root).as_posix(), text
