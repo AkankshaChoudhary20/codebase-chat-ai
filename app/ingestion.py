@@ -166,7 +166,7 @@ def iter_source_files(root: Path, max_file_size_bytes: int):
                 continue
             try:
                 # Strip an optional UTF-8 BOM so Python AST parsing keeps symbols.
-                text = raw.decode('utf-8-sig')
+                text = raw.decode('utf-8-sig').replace('\r\n', '\n').replace('\r', '\n')
             except UnicodeDecodeError:
                 continue
             yield path.relative_to(root).as_posix(), text
