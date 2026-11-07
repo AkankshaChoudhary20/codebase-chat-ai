@@ -65,7 +65,7 @@ class CodeChunk:
 
 def chunk_python_source(source: str, file_path: str) -> list[CodeChunk]:
     try:
-        tree = ast.parse(source)
+        tree = ast.parse(source.removeprefix('\ufeff'))
     except SyntaxError:
         return []  # caller falls back to whole-file-as-one-chunk
 
