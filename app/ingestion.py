@@ -111,7 +111,7 @@ def clone_repo(git_url: str, workdir: str) -> Path:
     dest = base / f"{uuid.uuid4().hex[:12]}"
 
     proc = subprocess.run(
-        ["git", "clone", "--depth", "1", git_url, str(dest)],
+        ["git", "clone", "--depth", "1", "--", git_url, str(dest)],
         capture_output=True,
         text=True,
         timeout=300,
